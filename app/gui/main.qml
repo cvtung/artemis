@@ -31,7 +31,11 @@ ApplicationWindow {
             Material.background = "#303030"
         }
 
-        SdlGamepadKeyNavigation.enable()
+        // Defer gamepad initialization to avoid a crash on macOS where
+        // SDL's HID device enumeration via IOKit can access invalid memory
+        // during QML object finalization (QQmlObjectCreator::finalize).
+        // Delay allows the QML engine and event loop to stabilize first.
+        gamepadInitTimer.start()
     }
 
     Component.onCompleted: {
@@ -145,6 +149,18 @@ ApplicationWindow {
         Keys.onHangupPressed: {
             settingsButton.clicked()
         }
+    }
+
+    // Delays gamepad initialization until after the QML engine has fully
+    // finished creating objects and the event loop is stable. Prevents a
+    // SIGSEGV on macOS caused by SDL's IOKit HID enumeration accessing
+    // invalid memory during QML object finalization.
+    Timer {
+        id: gamepadInitTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: SdlGamepadKeyNavigation.enable()
     }
 
     // This timer keeps us polling for 5 minutes of inactivity
