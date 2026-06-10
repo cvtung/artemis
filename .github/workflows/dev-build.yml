@@ -174,13 +174,13 @@ jobs:
           echo "  Branch: $BRANCH_NAME"
 
   compile-sanity:
-    name: Compile Sanity (macOS + Linux)
+    name: Compile Sanity (macOS only)
     needs: setup-version
     if: needs.setup-version.outputs.should_build == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-22.04]
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -349,7 +349,7 @@ jobs:
     name: Windows x64 Portable Build
     needs: setup-version
     runs-on: windows-latest
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -441,7 +441,7 @@ jobs:
     name: Windows ARM64 Portable Build
     needs: setup-version
     runs-on: windows-latest
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -585,7 +585,7 @@ jobs:
     name: Windows Universal Installer
     needs: setup-version
     runs-on: windows-latest
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -989,7 +989,7 @@ jobs:
     name: Linux Development Build
     needs: setup-version
     runs-on: ubuntu-22.04
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -1512,7 +1512,7 @@ jobs:
     name: Flatpak Development Build
     needs: setup-version
     runs-on: ubuntu-22.04
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -1736,7 +1736,7 @@ jobs:
     name: Raspberry Pi ARM64 Development Build
     needs: setup-version
     runs-on: ubuntu-22.04-arm
-    if: needs.setup-version.outputs.should_build == 'true'
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
@@ -1851,7 +1851,7 @@ jobs:
     name: Create Development Release
     needs: [setup-version, build-windows-x64-portable, build-windows-arm64-portable, build-windows-universal-installer, build-macos-dev, build-linux-dev, build-flatpak-dev, build-raspberry-pi-dev]
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.setup-version.outputs.should_build == 'true'  # Create releases for develop/main branches when builds ran
+    if: false  # Disabled for macOS-only CI
     
     steps:
     - name: Checkout
