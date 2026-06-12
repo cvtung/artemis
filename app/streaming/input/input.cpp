@@ -42,6 +42,11 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     // Allow gamepad input when the app doesn't have focus if requested
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, prefs.backgroundGamepad ? "1" : "0");
 
+    // Run joystick processing on a dedicated thread to avoid Main Thread Checker
+    // warnings and potential heap corruption from IOKit + CoreAnimation interaction
+    // when USB devices are hotplugged on macOS.
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+
 #if !SDL_VERSION_ATLEAST(2, 0, 15)
     // For older versions of SDL (2.0.14 and earlier), use SDL_HINT_GRAB_KEYBOARD
     SDL_SetHintWithPriority(SDL_HINT_GRAB_KEYBOARD,

@@ -31,6 +31,11 @@ void SdlGamepadKeyNavigation::enable()
         return;
     }
 
+    // Run joystick processing on a dedicated thread to avoid heap corruption
+    // from IOKit + CoreAnimation interaction when USB devices are hotplugged
+    // on macOS.
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+
     // We have to initialize and uninitialize this in enable()/disable()
     // because we need to get out of the way of the Session class. If it
     // doesn't get to reinitialize the GC subsystem, it won't get initial

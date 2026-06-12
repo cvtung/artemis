@@ -560,6 +560,10 @@ int main(int argc, char *argv[])
     // releases of Moonlight.
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
 
+    // Run joystick HID handling on a dedicated thread to avoid heap corruption
+    // from IOKit + CoreAnimation re-entrancy on macOS when USB devices are hotplugged.
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+
     // Disable relative mouse scaling to renderer size or logical DPI. We want to send
     // the mouse motion exactly how it was given to us.
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SCALING, "0");

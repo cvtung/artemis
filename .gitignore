@@ -32,6 +32,9 @@ debug/
 # IDE files
 .vscode/
 .idea/
+
+# CommandCode
+.commandcode/
 *.swp
 *.swo
 *~
