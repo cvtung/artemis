@@ -57,14 +57,14 @@ win32 {
 }
 macx:!disable-prebuilts {
     INCLUDEPATH += $$PWD/../libs/mac/include
-    INCLUDEPATH += $$PWD/../libs/mac/Frameworks/SDL2.framework/Versions/A/Headers
-    INCLUDEPATH += $$PWD/../libs/mac/Frameworks/SDL2_ttf.framework/Versions/A/Headers
-    LIBS += -L$$PWD/../libs/mac/lib -F$$PWD/../libs/mac/Frameworks
+    INCLUDEPATH += $$PWD/mac/Frameworks/SDL2.framework/Versions/A/Headers
+    INCLUDEPATH += $$PWD/mac/Frameworks/SDL2_ttf.framework/Versions/A/Headers
+    LIBS += -L$$PWD/../libs/mac/lib -F$$PWD/mac/Frameworks
 
     # QMake doesn't handle framework-style includes correctly on its own
-    QMAKE_CFLAGS += -F$$PWD/../libs/mac/Frameworks
-    QMAKE_CXXFLAGS += -F$$PWD/../libs/mac/Frameworks
-    QMAKE_OBJECTIVE_CFLAGS += -F$$PWD/../libs/mac/Frameworks
+    QMAKE_CFLAGS += -F$$PWD/mac/Frameworks
+    QMAKE_CXXFLAGS += -F$$PWD/mac/Frameworks
+    QMAKE_OBJECTIVE_CFLAGS += -F$$PWD/mac/Frameworks
 }
 
 unix:if(!macx|disable-prebuilts) {
@@ -598,7 +598,7 @@ macx {
     QMAKE_BUNDLE_DATA += APP_BUNDLE_RESOURCES APP_BUNDLE_PLIST
 
     !disable-prebuilts {
-        APP_BUNDLE_FRAMEWORKS.files = $$files(../libs/mac/Frameworks/*.framework, true) $$files(../libs/mac/lib/*.dylib, true)
+        APP_BUNDLE_FRAMEWORKS.files = $$files($$PWD/mac/Frameworks/*.framework, true) $$files(../libs/mac/lib/*.dylib, true)
         APP_BUNDLE_FRAMEWORKS.path = Contents/Frameworks
 
         QMAKE_BUNDLE_DATA += APP_BUNDLE_FRAMEWORKS
