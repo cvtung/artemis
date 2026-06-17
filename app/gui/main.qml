@@ -72,6 +72,11 @@ ApplicationWindow {
             unmappedGamepadDialog.unmappedGamepads = SystemProperties.unmappedGamepads
             unmappedGamepadDialog.open()
         }
+
+        // Defer SdlGamepadKeyNavigation singleton access to avoid instantiating
+        // it during QML object creation (which may trigger heap corruption on
+        // macOS when CoreAnimation is in the middle of compositing).
+        gamepadConn.target = SdlGamepadKeyNavigation
     }
   
     // It would be better to use TextMetrics here, but it always lays out
@@ -549,7 +554,11 @@ ApplicationWindow {
     }
 
     Connections {
-        target: SdlGamepadKeyNavigation
+        id: gamepadConn
+        // target is deferred to Component.onCompleted below to avoid instantiating
+        // SdlGamepadKeyNavigation during QML object creation (which may trigger heap
+        // corruption on macOS when CoreAnimation is in the middle of compositing).
+        target: null
         function onUnmappedGamepadDetected(name) {
             unmappedGamepadDialog.showFor(name)
         }
