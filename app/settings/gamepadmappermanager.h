@@ -31,6 +31,11 @@ public:
     Q_INVOKABLE QVariantList logicalInputs() const;
     Q_INVOKABLE QString currentBindingDescription(int logicalInputId) const;
 
+    struct BindingEntry {
+        QString sdlField;    // e.g. "a", "b", "lefttrigger", "dpup"
+        const char* humanLabel;  // e.g. "A", "B" — const char* for tr() compatibility
+    };
+
 signals:
     void attachedDevicesChanged();
     void bindingCaptured(int logicalInputId, QString bindingString);
@@ -46,11 +51,6 @@ private:
         int index;
         QString name;
         QString guid;
-    };
-
-    struct BindingEntry {
-        QString sdlField;    // e.g. "a", "b", "lefttrigger", "dpup"
-        QString humanLabel;  // e.g. "A", "B"
     };
 
     void openDevice();

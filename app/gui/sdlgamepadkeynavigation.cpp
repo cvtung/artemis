@@ -198,6 +198,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             break;
         }
         case SDL_CONTROLLERDEVICEADDED:
+        {
             SDL_GameController* gc = SDL_GameControllerOpen(event.cdevice.which);
             if (gc != nullptr) {
                 // SDL_CONTROLLERDEVICEADDED can be reported multiple times for the same
@@ -213,6 +214,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
                 }
             }
             break;
+        }
         case SDL_JOYDEVICEADDED:
             // A raw joystick arrived. If SDL doesn't have a mapping for it,
             // surface it to the UI so the user can be told their device is
@@ -220,7 +222,7 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
             if (!SDL_IsGameController(event.jdevice.which)) {
                 SDL_JoystickID id = SDL_JoystickGetDeviceInstanceID(event.jdevice.which);
                 if (id >= 0 && !m_KnownUnmappedJoysticks.contains(id)) {
-                    m_KnownUnmappedJoysticks.insert(id);
+                    m_KnownUnmappedJoysticks.append(id);
                     const char* name = SDL_JoystickNameForIndex(event.jdevice.which);
                     emit unmappedGamepadDetected(name ? QString::fromUtf8(name)
                                                      : QStringLiteral("<UNKNOWN>"));
