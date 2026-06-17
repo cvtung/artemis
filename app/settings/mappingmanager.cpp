@@ -100,23 +100,25 @@ void MappingManager::applyMappings()
                     "Bundled gamecontrollerdb.txt not found (submodule may be uninitialized)");
     }
 
-    // Fallback: also load cached mapping file from a previous successful fetch.
-    // This handles the case where the submodule was never initialized but the
-    // file was previously downloaded and cached. SDL deduplicates mappings
-    // internally, so loading both is safe.
-    QFileInfo cachedInfo = Path::getCacheFileInfo("gamecontrollerdb.txt");
-    if (cachedInfo.exists() && cachedInfo.size() > 0) {
-        QFile cachedFile(cachedInfo.absoluteFilePath());
-        if (cachedFile.open(QIODevice::ReadOnly)) {
-            QByteArray cachedData = cachedFile.readAll();
-            int newMappings = SDL_GameControllerAddMappingsFromRW(
-                        SDL_RWFromConstMem(cachedData.constData(), cachedData.size()), 1);
-            if (newMappings > 0) {
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                            "Loaded %d gamepad mappings from cache fallback",
-                            newMappings);
+    // Fallback: load cached file only when bundled file is missing (submodule
+    // uninitialized). Intentional single-call design: a second
+    // SDL_GameControllerAddMappingsFromRW call could race with SDL's internal
+    // joystick thread when SDL_HINT_JOYSTICK_THREAD is enabled on macOS.
+    if (mappingData.isEmpty()) {
+        QFileInfo cachedInfo = Path::getCacheFileInfo("gamecontrollerdb.txt");
+        if (cachedInfo.exists() && cachedInfo.size() > 0) {
+            QFile cachedFile(cachedInfo.absoluteFilePath());
+            if (cachedFile.open(QIODevice::ReadOnly)) {
+                QByteArray cachedData = cachedFile.readAll();
+                int newMappings = SDL_GameControllerAddMappingsFromRW(
+                            SDL_RWFromConstMem(cachedData.constData(), cachedData.size()), 1);
+                if (newMappings > 0) {
+                    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                                "Loaded %d gamepad mappings from cache fallback",
+                                newMappings);
+                }
+                cachedFile.close();
             }
-            cachedFile.close();
         }
     }
 
