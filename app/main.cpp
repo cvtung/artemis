@@ -47,6 +47,7 @@
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "settings/gamepadmappermanager.h"
 #include "backend/clipboardmanager.h"
 #include "backend/servercommandmanager.h"
 #include "backend/quickmenumanager.h"
@@ -725,10 +726,15 @@ int main(int argc, char *argv[])
                                                    return new SystemProperties();
                                                });
     qmlRegisterSingletonType<SdlGamepadKeyNavigation>("SdlGamepadKeyNavigation", 1, 0,
-                                                      "SdlGamepadKeyNavigation",
-                                                      [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
-                                                          return new SdlGamepadKeyNavigation(StreamingPreferences::get(qmlEngine));
-                                                      });
+                                                       "SdlGamepadKeyNavigation",
+                                                       [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {
+                                                           return new SdlGamepadKeyNavigation(StreamingPreferences::get(qmlEngine));
+                                                       });
+    qmlRegisterSingletonType<GamepadMapperManager>("GamepadMapperManager", 1, 0,
+                                                   "GamepadMapperManager",
+                                                   [](QQmlEngine*, QJSEngine*) -> QObject* {
+                                                       return new GamepadMapperManager();
+                                                   });
     qmlRegisterSingletonType<StreamingPreferences>("StreamingPreferences", 1, 0,
                                                    "StreamingPreferences",
                                                    [](QQmlEngine* qmlEngine, QJSEngine*) -> QObject* {

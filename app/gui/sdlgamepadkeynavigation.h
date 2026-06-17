@@ -26,6 +26,9 @@ public:
 
     Q_INVOKABLE int getConnectedGamepads();
 
+signals:
+    void unmappedGamepadDetected(QString name);
+
 private:
     void sendKey(QEvent::Type type, Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
@@ -38,6 +41,7 @@ private:
     StreamingPreferences* m_Prefs;
     QTimer* m_PollingTimer;
     QList<SDL_GameController*> m_Gamepads;
+    QList<SDL_JoystickID> m_KnownUnmappedJoysticks;
     bool m_Enabled;
     bool m_UiNavMode;
     bool m_FirstPoll;

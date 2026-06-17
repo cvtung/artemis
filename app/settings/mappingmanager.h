@@ -68,6 +68,8 @@ public:
 
     void applyMappings();
 
+    void deleteMapping(QString guid);
+
     void save();
 
 private:

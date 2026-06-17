@@ -9,6 +9,7 @@ import AutoUpdateChecker 1.0
 import StreamingPreferences 1.0
 import SystemProperties 1.0
 import SdlGamepadKeyNavigation 1.0
+import GamepadMapperManager 1.0
 
 ApplicationWindow {
     property bool pollingActive: false
@@ -421,8 +422,7 @@ ApplicationWindow {
             }
 
             NavigableToolButton {
-                // TODO: Implement gamepad mapping then unhide this button
-                visible: false
+                visible: true
 
                 ToolTip.delay: 1000
                 ToolTip.timeout: 3000
@@ -488,13 +488,71 @@ ApplicationWindow {
         }
     }
 
-    ErrorMessageDialog {
+    NavigableDialog {
         id: unmappedGamepadDialog
+
         property string unmappedGamepads : ""
+
         text: qsTr("Artemis detected gamepads without a mapping:") + "\n" + unmappedGamepads
-        helpTextSeparator: "\n\n"
-        helpText: qsTr("Click the Help button for information on how to map your gamepads.")
-        helpUrl: "https://github.com/wjbeckett/artemis/wiki/Gamepad-Mapping"
+
+        function showFor(name) {
+            GamepadMapperManager.selectDeviceByName(name)
+            unmappedGamepads = name
+            open()
+        }
+
+        contentItem: RowLayout {
+            spacing: 10
+
+            Image {
+                source: "qrc:/res/baseline-error_outline-24px.svg"
+                sourceSize {
+                    width: 50
+                    height: 50
+                }
+            }
+
+            Label {
+                text: unmappedGamepadDialog.text
+                wrapMode: Text.Wrap
+                Layout.maximumWidth: 400
+                Layout.maximumHeight: 400
+            }
+        }
+
+        footer: DialogButtonBox {
+            Button {
+                text: qsTr("Map now")
+                DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                onClicked: {
+                    navigateTo("qrc:/gui/GamepadMapper.qml", "GamepadMapper")
+                    close()
+                }
+            }
+
+            Button {
+                text: qsTr("OK")
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                onClicked: close()
+            }
+
+            Button {
+                text: qsTr("Help")
+                DialogButtonBox.buttonRole: DialogButtonBox.HelpRole
+                visible: SystemProperties.hasBrowser
+                onClicked: {
+                    Qt.openUrlExternally("https://github.com/wjbeckett/artemis/wiki/Gamepad-Mapping")
+                    close()
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: SdlGamepadKeyNavigation
+        function onUnmappedGamepadDetected(name) {
+            unmappedGamepadDialog.showFor(name)
+        }
     }
 
     // This dialog appears when quitting via keyboard or gamepad button

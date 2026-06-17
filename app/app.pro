@@ -208,6 +208,7 @@ SOURCES += \
     backend/autoupdatechecker.cpp \
     path.cpp \
     settings/mappingmanager.cpp \
+    settings/gamepadmappermanager.cpp \
     gui/sdlgamepadkeynavigation.cpp \
     streaming/video/overlaymanager.cpp \
     backend/systemproperties.cpp \
@@ -251,6 +252,7 @@ HEADERS += \
     backend/autoupdatechecker.h \
     path.h \
     settings/mappingmanager.h \
+    settings/gamepadmappermanager.h \
     gui/sdlgamepadkeynavigation.h \
     streaming/video/overlaymanager.h \
     backend/systemproperties.h \

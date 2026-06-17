@@ -49,16 +49,23 @@ void MappingFetcher::start()
 #if QT_VERSION >= QT_VERSION_CHECK(5, 12, 0)
     // Only download the file if it's newer than what we have
     QFileInfo existingFileInfo = Path::getCacheFileInfo("gamecontrollerdb.txt");
-    if (existingFileInfo.exists()) {
+    if (existingFileInfo.exists() && existingFileInfo.size() > 0) {
         // Make sure the cached file looks reasonable. It should have some data and
         // the last modified time should not be in the future.
         QDateTime lastModifiedTime = existingFileInfo.lastModified().toUTC();
-        if (existingFileInfo.size() > 0 && lastModifiedTime <= QDateTime::currentDateTimeUtc()) {
+        if (lastModifiedTime <= QDateTime::currentDateTimeUtc()) {
             request.setHeader(QNetworkRequest::IfModifiedSinceHeader, existingFileInfo.lastModified().toUTC());
         }
         else {
             Path::deleteCacheFile("gamecontrollerdb.txt");
         }
+    }
+    else {
+        // Cache is missing or empty — always fetch unconditionally
+        if (existingFileInfo.exists()) {
+            Path::deleteCacheFile("gamecontrollerdb.txt");
+        }
+        qWarning() << "No cached gamecontrollerdb.txt found. Fetching unconditionally.";
     }
 #endif
 

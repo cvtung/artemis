@@ -347,6 +347,17 @@ echo Copying AntiHooking.dll
 copy %BUILD_FOLDER%\AntiHooking\%BUILD_CONFIG%\AntiHooking.dll %DEPLOY_FOLDER%
 if !ERRORLEVEL! NEQ 0 goto Error
 
+echo Initializing gamecontrollerdb submodule
+if not exist "%SOURCE_ROOT%\app\SDL_GameControllerDB\gamecontrollerdb.txt" (
+    git submodule update --init --recursive 2>&1
+    if !ERRORLEVEL! NEQ 0 (
+        echo WARNING: Failed to initialize gamecontrollerdb submodule. The bundled mapping database will not be available.
+    )
+)
+if not exist "%SOURCE_ROOT%\app\SDL_GameControllerDB\gamecontrollerdb.txt" (
+    echo WARNING: gamecontrollerdb.txt not found after submodule init. Continuing without bundled mapping database.
+)
+
 echo Copying GC mapping list
 copy %SOURCE_ROOT%\app\SDL_GameControllerDB\gamecontrollerdb.txt %DEPLOY_FOLDER%
 if !ERRORLEVEL! NEQ 0 goto Error

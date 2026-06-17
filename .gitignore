@@ -33,6 +33,9 @@ debug/
 .vscode/
 .idea/
 
+# CodeGraph index
+.codegraph/
+
 # CommandCode
 .commandcode/
 *.swp

@@ -2,6 +2,7 @@
 #include "path.h"
 
 #include <QDir>
+#include <QFile>
 
 #include "SDL_compat.h"
 
@@ -68,6 +69,7 @@ void MappingManager::save()
 
 void MappingManager::applyMappings()
 {
+    // First try loading the bundled gamecontrollerdb.txt from QRC
     QByteArray mappingData = Path::readDataFile("gamecontrollerdb.txt");
     if (!mappingData.isEmpty()) {
         int newMappings = SDL_GameControllerAddMappingsFromRW(
@@ -75,7 +77,7 @@ void MappingManager::applyMappings()
 
         if (newMappings > 0) {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                        "Loaded %d new gamepad mappings",
+                        "Loaded %d new gamepad mappings from bundled DB",
                         newMappings);
         }
         else {
@@ -94,8 +96,28 @@ void MappingManager::applyMappings()
         }
     }
     else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Unable to load gamepad mapping file");
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                    "Bundled gamecontrollerdb.txt not found (submodule may be uninitialized)");
+    }
+
+    // Fallback: also load cached mapping file from a previous successful fetch.
+    // This handles the case where the submodule was never initialized but the
+    // file was previously downloaded and cached. SDL deduplicates mappings
+    // internally, so loading both is safe.
+    QFileInfo cachedInfo = Path::getCacheFileInfo("gamecontrollerdb.txt");
+    if (cachedInfo.exists() && cachedInfo.size() > 0) {
+        QFile cachedFile(cachedInfo.absoluteFilePath());
+        if (cachedFile.open(QIODevice::ReadOnly)) {
+            QByteArray cachedData = cachedFile.readAll();
+            int newMappings = SDL_GameControllerAddMappingsFromRW(
+                        SDL_RWFromConstMem(cachedData.constData(), cachedData.size()), 1);
+            if (newMappings > 0) {
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "Loaded %d gamepad mappings from cache fallback",
+                            newMappings);
+            }
+            cachedFile.close();
+        }
     }
 
     QList<SdlGamepadMapping> mappings = m_Mappings.values();
@@ -124,4 +146,10 @@ void MappingManager::addMapping(QString mappingString)
 void MappingManager::addMapping(SdlGamepadMapping& mapping)
 {
     m_Mappings[mapping.getGuid()] = mapping;
+}
+
+void MappingManager::deleteMapping(QString guid)
+{
+    m_Mappings.remove(guid);
+    save();
 }
