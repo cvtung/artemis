@@ -9,6 +9,7 @@ Item {
 
     property int selectedDeviceIndex: -1
     property int capturingInputId: -1
+    property int bindingsRev: 0
 
     // Error dialog for the page
     NavigableMessageDialog {
@@ -148,8 +149,14 @@ Item {
                             }
 
                             Label {
-                                text: GamepadMapperManager.currentBindingDescription(modelData.id)
-                                color: GamepadMapperManager.currentBindingDescription(modelData.id) === qsTr("(unbound)") ? "#888" : "#4caf50"
+                                text: {
+                                    bindingsRev;
+                                    return GamepadMapperManager.currentBindingDescription(modelData.id);
+                                }
+                                color: {
+                                    bindingsRev;
+                                    return (GamepadMapperManager.currentBindingDescription(modelData.id) === qsTr("(unbound)")) ? "#888" : "#4caf50";
+                                }
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                             }
@@ -171,6 +178,7 @@ Item {
                                 enabled: selectedDeviceIndex >= 0 && capturingInputId !== modelData.id
                                 onClicked: {
                                     GamepadMapperManager.clearBinding(modelData.id)
+                                    bindingsRev++
                                 }
                             }
                         }
@@ -189,7 +197,10 @@ Item {
             Button {
                 text: qsTr("Reset to default")
                 enabled: selectedDeviceIndex >= 0
-                onClicked: GamepadMapperManager.resetToDefault()
+                onClicked: {
+                    GamepadMapperManager.resetToDefault()
+                    bindingsRev++
+                }
             }
 
             Button {
@@ -213,6 +224,7 @@ Item {
         target: GamepadMapperManager
         function onBindingCaptured(id, binding) {
             capturingInputId = -1
+            bindingsRev++
         }
         function onCaptureTimeout() {
             capturingInputId = -1

@@ -371,6 +371,11 @@ void GamepadMapperManager::onCaptureTimerFired()
             emit bindingCaptured(capturedId, binding);
             return;
         }
+        else if (current == 0 && initial == 1) {
+            // Button was released — update baseline so a subsequent press
+            // is caught even if the user was holding the button during debounce.
+            m_InitialButtons[b] = 0;
+        }
     }
 
     // Check axes: first axis with delta > 16000
@@ -386,6 +391,11 @@ void GamepadMapperManager::onCaptureTimerFired()
             m_CapturingInputId = -1;
             emit bindingCaptured(capturedId, binding);
             return;
+        }
+        // If the axis returns close to center, update baseline so a new
+        // deflection is detectable.
+        if (qAbs(current) < 8000) {
+            m_InitialAxes[a] = current;
         }
     }
 
@@ -404,6 +414,11 @@ void GamepadMapperManager::onCaptureTimerFired()
                 emit bindingCaptured(capturedId, binding);
                 return;
             }
+        }
+        else {
+            // Hat returned to center — update baseline so a subsequent
+            // directional press is detected.
+            m_InitialHats[h] = current;
         }
     }
 
