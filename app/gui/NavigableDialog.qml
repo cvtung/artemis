@@ -2,6 +2,11 @@ import QtQuick 2.0
 import QtQuick.Controls 2.2
 
 Dialog {
+    // Expose a text property for the content label to bind to.
+    // Dialog does not have a text property like MessageDialog,
+    // so we must declare it here for use by callers.
+    property string text: ""
+
     // We should use Overlay.overlay here but that's not available in Qt 5.9 :(
     parent: ApplicationWindow.contentItem
 

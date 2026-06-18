@@ -112,9 +112,9 @@ void Path::initialize(bool portable)
     }
     else {
 #ifdef Q_OS_DARWIN
-        // On macOS, $TMPDIR is some random folder under /var/folders/ that nobody can
-        // easily find, so use the system's global tmp directory instead.
-        s_LogDir = "/tmp";
+        // On macOS, use ~/Library/Logs which is the standard log location
+        // that users can easily find via Finder or Console app.
+        s_LogDir = QDir::homePath() + "/Library/Logs";
 #else
         s_LogDir = QDir::tempPath();
 #endif

@@ -36,6 +36,13 @@ void SdlGamepadKeyNavigation::enable()
     // on macOS.
     SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
 
+    // Load mappings BEFORE initializing the game controller subsystem. On macOS
+    // with SDL_HINT_JOYSTICK_THREAD, SDL_InitSubSystem() starts a dedicated
+    // joystick HID thread that reads the mapping table. If we modify the mapping
+    // table while that thread is running, we race with it and cause heap corruption.
+    MappingManager mappingManager;
+    mappingManager.applyMappings();
+
     // We have to initialize and uninitialize this in enable()/disable()
     // because we need to get out of the way of the Session class. If it
     // doesn't get to reinitialize the GC subsystem, it won't get initial
@@ -48,9 +55,6 @@ void SdlGamepadKeyNavigation::enable()
                      SDL_GetError());
         return;
     }
-
-    MappingManager mappingManager;
-    mappingManager.applyMappings();
 
     // Drop all pending gamepad add events. SDL will generate these for us
     // on first init of the GC subsystem. We can't depend on them due to

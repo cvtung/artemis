@@ -934,14 +934,18 @@ QString SdlInputHandler::getUnmappedGamepads()
 {
     QString ret;
 
+    // Load mappings BEFORE initializing the game controller subsystem. On macOS
+    // with SDL_HINT_JOYSTICK_THREAD, SDL_InitSubSystem() starts a dedicated
+    // joystick HID thread that reads the mapping table. If we modify the mapping
+    // table while that thread is running, we race with it and cause heap corruption.
+    MappingManager mappingManager;
+    mappingManager.applyMappings();
+
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) failed: %s",
                      SDL_GetError());
     }
-
-    MappingManager mappingManager;
-    mappingManager.applyMappings();
 
     int numJoysticks = SDL_NumJoysticks();
     for (int i = 0; i < numJoysticks; i++) {
