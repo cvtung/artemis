@@ -236,11 +236,29 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         case SDL_JOYDEVICEREMOVED:
             m_KnownUnmappedJoysticks.remove(event.jdevice.which);
             break;
+        case SDL_CONTROLLERDEVICEREMOVED:
+        {
+            // Find and close the game controller that was removed.
+            // Without this handler, stale pointers accumulate in m_Gamepads
+            // and the axis polling loop below crashes on them.
+            for (int i = 0; i < m_Gamepads.size(); i++) {
+                SDL_Joystick* joystick = SDL_GameControllerGetJoystick(m_Gamepads[i]);
+                if (joystick != nullptr &&
+                        SDL_JoystickInstanceID(joystick) == event.cdevice.which) {
+                    SDL_GameControllerClose(m_Gamepads[i]);
+                    m_Gamepads.removeAt(i);
+                    break;
+                }
+            }
+            break;
+        }
         }
     }
 
     // Handle analog sticks by polling
     for (auto gc : m_Gamepads) {
+        if (gc == nullptr) continue;
+
         short leftX = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTX);
         short leftY = SDL_GameControllerGetAxis(gc, SDL_CONTROLLER_AXIS_LEFTY);
         if (SDL_GetTicks() - m_LastAxisNavigationEventTime < AXIS_NAVIGATION_REPEAT_DELAY) {
