@@ -108,7 +108,7 @@ void MappingManager::applyMappings()
 
     SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
                  "MappingManager: applyMappings() complete — loaded %d user mapping(s) into SDL",
-                 mappings.size());
+                 m_Mappings.size());
 
     // Fallback: load cached file only when bundled file is missing (submodule
     // uninitialized). Intentional single-call design: a second

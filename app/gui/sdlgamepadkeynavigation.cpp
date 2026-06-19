@@ -91,8 +91,8 @@ void SdlGamepadKeyNavigation::enable()
     m_Enabled = true;
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                "SdlGamepadKeyNavigation: Enabled with %d gamepad(s)",
-                m_Gamepads.size());
+                "SdlGamepadKeyNavigation: Enabled with %lld gamepad(s)",
+                (long long)m_Gamepads.size());
 
     // Start the polling timer if the window is focused
     updateTimerState();
@@ -105,8 +105,8 @@ void SdlGamepadKeyNavigation::disable()
     }
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
-                "SdlGamepadKeyNavigation: Disabling with %d gamepad(s)",
-                m_Gamepads.size());
+                "SdlGamepadKeyNavigation: Disabling with %lld gamepad(s)",
+                (long long)m_Gamepads.size());
 
     m_Enabled = false;
     updateTimerState();

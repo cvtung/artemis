@@ -83,9 +83,9 @@ GamepadMapperManager::GamepadMapperManager(QObject* parent)
     , m_Controller(nullptr)
     , m_Joystick(nullptr)
     , m_CapturingInputId(-1)
+    , m_PendingDeviceName()
     , m_CaptureDebounceFrames(0)
     , m_CaptureFrameCount(0)
-    , m_PendingDeviceName()
 {
     m_RescanTimer->setInterval(1000);
     m_RescanTimer->setSingleShot(false);
@@ -332,7 +332,7 @@ void GamepadMapperManager::startCapture(int logicalInputId)
 
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "GamepadMapper: Starting capture for logicalInputId=%d (%s)",
-                logicalInputId, k_LogicalInputs[logicalInputId].sdlField);
+                logicalInputId, k_LogicalInputs[logicalInputId].sdlField.toUtf8().constData());
 
     // Snapshot initial state
     m_InitialAxes.clear();
