@@ -505,6 +505,9 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         char guidStr[33];
         uint32_t hapticCaps;
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Stream input: CONTROLLERDEVICEADDED (which=%d, timestamp=%u)",
+                    event->which, event->timestamp);
         controller = SDL_GameControllerOpen(event->which);
         if (controller == NULL) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -551,6 +554,11 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
 
         SDL_JoystickGetGUIDString(SDL_JoystickGetGUID(SDL_GameControllerGetJoystick(controller)),
                                   guidStr, sizeof(guidStr));
+        name = SDL_GameControllerName(controller);
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Stream input: Opened gamepad slot %d — name=\"%s\" guid=%s",
+                    i, name ? name : "<UNKNOWN>", guidStr);
+
         if (m_IgnoreDeviceGuids.contains(guidStr, Qt::CaseInsensitive))
         {
             SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
@@ -573,9 +581,11 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         }
         else {
             // Always player 1 in single controller mode
-            state->index = 0;
+                    state->index = 0;
         }
 
+        // Log stream mask after adding this controller
+        int oldMask = m_GamepadMask;
         state->controller = controller;
         state->jsId = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(state->controller));
 
@@ -735,6 +745,10 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
         }
     }
     else if (event->type == SDL_CONTROLLERDEVICEREMOVED) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Stream input: CONTROLLERDEVICEREMOVED (instanceId=%d, timestamp=%u)",
+                    event->which, event->timestamp);
+
         state = findStateForGamepad(event->which);
         if (state != NULL) {
             if (state->mouseEmulationTimer != 0) {
@@ -742,6 +756,9 @@ void SdlInputHandler::handleControllerDeviceEvent(SDL_ControllerDeviceEvent* eve
                 SDL_RemoveTimer(state->mouseEmulationTimer);
             }
 
+            SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                        "Stream input: Closing gamepad at slot %d",
+                        state->index);
             SDL_GameControllerClose(state->controller);
 
 #if !SDL_VERSION_ATLEAST(2, 0, 9)

@@ -46,6 +46,9 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     // warnings and potential heap corruption from IOKit + CoreAnimation interaction
     // when USB devices are hotplugged on macOS.
     SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: SDL_HINT_JOYSTICK_THREAD set to \"1\" —"
+                " joystick thread will start on next SDL_INIT_JOYSTICK");
 
 #if !SDL_VERSION_ATLEAST(2, 0, 15)
     // For older versions of SDL (2.0.14 and earlier), use SDL_HINT_GRAB_KEYBOARD
@@ -164,12 +167,32 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
     // SDL doesn't have a built-in mapping. By starting joystick first, we
     // can allow mapping manager to update the mappings before GC attach
     // events are generated.
-    SDL_assert(!SDL_WasInit(SDL_INIT_JOYSTICK));
+    //
+    // If joystick/gamecontroller was already initialized (e.g. from
+    // SdlGamepadKeyNavigation during UI init), SDL_HINT_JOYSTICK_THREAD
+    // was set AFTER that initialization and the joystick thread won't be
+    // running. Quit and re-init so the hint takes effect — on macOS this
+    // is essential to avoid heap corruption from IOKit + CoreAnimation
+    // re-entrancy when controllers are hotplugged during streaming.
+    if (SDL_WasInit(SDL_INIT_GAMECONTROLLER)) {
+        SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+    }
+    if (SDL_WasInit(SDL_INIT_JOYSTICK)) {
+        SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
+    }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: Initializing SDL_INIT_JOYSTICK%s",
+                SDL_WasInit(SDL_INIT_JOYSTICK) ? " (was already init, re-initializing)" : "");
     if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "SDL_InitSubSystem(SDL_INIT_JOYSTICK) failed: %s",
                      SDL_GetError());
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: Joystick subsystem initialized. SDL_NumJoysticks() = %d",
+                SDL_NumJoysticks());
 
     MappingManager mappingManager;
     mappingManager.applyMappings();
@@ -182,11 +205,14 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
 
     // We need to reinit this each time, since you only get
     // an initial set of gamepad arrival events once per init.
-    SDL_assert(!SDL_WasInit(SDL_INIT_GAMECONTROLLER));
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
                      "SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) failed: %s",
                      SDL_GetError());
+    }
+    else {
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Stream input: GameController subsystem initialized");
     }
 
 #if !SDL_VERSION_ATLEAST(2, 0, 9)
@@ -211,6 +237,10 @@ SdlInputHandler::SdlInputHandler(StreamingPreferences& prefs, int streamWidth, i
 
 SdlInputHandler::~SdlInputHandler()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: Shutting down with %d gamepad(s) in mask 0x%x",
+                __builtin_popcount(m_GamepadMask), m_GamepadMask);
+
     for (int i = 0; i < MAX_GAMEPADS; i++) {
         if (m_GamepadState[i].mouseEmulationTimer != 0) {
             Session::get()->notifyMouseEmulationMode(false);
@@ -236,11 +266,13 @@ SdlInputHandler::~SdlInputHandler()
     SDL_assert(!SDL_WasInit(SDL_INIT_HAPTIC));
 #endif
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: Quitting SDL_INIT_GAMECONTROLLER");
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
-    SDL_assert(!SDL_WasInit(SDL_INIT_GAMECONTROLLER));
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Stream input: Quitting SDL_INIT_JOYSTICK");
     SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
-    SDL_assert(!SDL_WasInit(SDL_INIT_JOYSTICK));
 
     // Return background event handling to off
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "0");
