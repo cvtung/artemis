@@ -64,6 +64,7 @@ private:
     // Device state
     QList<DeviceInfo> m_Devices;
     int m_SelectedDeviceIndex;
+    QString m_PendingDeviceName;
     SDL_GameController* m_Controller;
     SDL_Joystick* m_Joystick;
 

@@ -85,6 +85,7 @@ GamepadMapperManager::GamepadMapperManager(QObject* parent)
     , m_CapturingInputId(-1)
     , m_CaptureDebounceFrames(0)
     , m_CaptureFrameCount(0)
+    , m_PendingDeviceName()
 {
     m_RescanTimer->setInterval(1000);
     m_RescanTimer->setSingleShot(false);
@@ -136,6 +137,9 @@ QVariantList GamepadMapperManager::attachedDevices() const
 
 void GamepadMapperManager::open()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: open()");
+
     // Snapshot current bindings so resetToDefault() works
     m_DefaultBindings = m_Bindings;
 
@@ -145,6 +149,8 @@ void GamepadMapperManager::open()
 
 void GamepadMapperManager::close()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: close()");
     m_RescanTimer->stop();
     m_CaptureTimer->stop();
     m_CapturingInputId = -1;
@@ -164,17 +170,21 @@ void GamepadMapperManager::rescan()
     m_Devices.clear();
 
     int numSticks = SDL_NumJoysticks();
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                 "GamepadMapper: rescan() — SDL_NumJoysticks() = %d",
+                 numSticks);
     for (int i = 0; i < numSticks; i++) {
-        // Only include devices that support the game controller interface
-        if (!SDL_IsGameController(i)) {
-            continue;
-        }
-
         DeviceInfo dev;
         dev.index = i;
-        dev.name = QString::fromUtf8(SDL_JoystickNameForIndex(i));
+
+        const char* name = SDL_JoystickNameForIndex(i);
+        dev.name = name ? QString::fromUtf8(name) : QStringLiteral("Unknown");
         dev.guid = guidToString(SDL_JoystickGetDeviceGUID(i));
         m_Devices.append(dev);
+
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                     "GamepadMapper:   joystick[%d] = \"%s\" (guid=%s)",
+                     i, qPrintable(dev.name), qPrintable(dev.guid));
     }
 
     // If the currently selected device was removed, invalidate
@@ -185,6 +195,17 @@ void GamepadMapperManager::rescan()
     }
 
     emit attachedDevicesChanged();
+
+    // Auto-select a device that was requested before the scan
+    if (!m_PendingDeviceName.isEmpty()) {
+        for (int i = 0; i < m_Devices.size(); i++) {
+            if (m_Devices[i].name == m_PendingDeviceName) {
+                selectDeviceByIndex(i);
+                break;
+            }
+        }
+        m_PendingDeviceName.clear();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +219,9 @@ void GamepadMapperManager::selectDeviceByIndex(int index)
         return;
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: selectDeviceByIndex(%d) — \"%s\"",
+                index, qPrintable(m_Devices[index].name));
     closeDevice();
     m_Bindings.clear();
     m_SelectedDeviceIndex = index;
@@ -206,14 +230,14 @@ void GamepadMapperManager::selectDeviceByIndex(int index)
 
 void GamepadMapperManager::selectDeviceByName(QString name)
 {
+    m_PendingDeviceName = name;
+
     for (int i = 0; i < m_Devices.size(); i++) {
         if (m_Devices[i].name == name) {
             selectDeviceByIndex(i);
             return;
         }
     }
-
-    emit errorOccurred(tr("Device '%1' not found").arg(name));
 }
 
 // ---------------------------------------------------------------------------
@@ -226,6 +250,9 @@ void GamepadMapperManager::openDevice()
         return;
 
     const DeviceInfo& dev = m_Devices[m_SelectedDeviceIndex];
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: Opening device index %d (\"%s\", guid=%s)",
+                dev.index, qPrintable(dev.name), qPrintable(dev.guid));
 
     // Try opening as a game controller first (community or user mapping exists)
     m_Controller = SDL_GameControllerOpen(dev.index);
@@ -280,10 +307,14 @@ void GamepadMapperManager::openDevice()
 void GamepadMapperManager::closeDevice()
 {
     if (m_Controller) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "GamepadMapper: Closing game controller");
         SDL_GameControllerClose(m_Controller);
         m_Controller = nullptr;
         m_Joystick = nullptr;
     } else if (m_Joystick) {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "GamepadMapper: Closing raw joystick");
         SDL_JoystickClose(m_Joystick);
         m_Joystick = nullptr;
     }
@@ -298,6 +329,10 @@ void GamepadMapperManager::startCapture(int logicalInputId)
     if (!m_Joystick || logicalInputId < 0 || logicalInputId >= k_LogicalInputCount) {
         return;
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: Starting capture for logicalInputId=%d (%s)",
+                logicalInputId, k_LogicalInputs[logicalInputId].sdlField);
 
     // Snapshot initial state
     m_InitialAxes.clear();
@@ -450,12 +485,17 @@ void GamepadMapperManager::resetToDefault()
 void GamepadMapperManager::commitMapping()
 {
     if (m_SelectedDeviceIndex < 0 || m_SelectedDeviceIndex >= m_Devices.size()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "GamepadMapper: commitMapping() failed — no device selected");
         emit errorOccurred(tr("No device selected"));
         return;
     }
 
     const DeviceInfo& dev = m_Devices[m_SelectedDeviceIndex];
     QString mappingStr = buildSdlMappingString();
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: commitMapping() for \"%s\" — mapping=\"%s\"",
+                qPrintable(dev.name), qPrintable(mappingStr));
 
     if (mappingStr.isEmpty()) {
         emit errorOccurred(tr("No bindings to save"));
@@ -465,9 +505,15 @@ void GamepadMapperManager::commitMapping()
     // Apply to SDL immediately
     int ret = SDL_GameControllerAddMapping(qPrintable(mappingStr));
     if (ret < 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "GamepadMapper: SDL_GameControllerAddMapping failed: %s",
+                     SDL_GetError());
         emit errorOccurred(tr("Failed to add mapping: %1").arg(SDL_GetError()));
         return;
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "GamepadMapper: SDL_GameControllerAddMapping returned %d", ret);
 
     // Persist via MappingManager
     MappingManager manager;

@@ -214,7 +214,6 @@ Item {
                 highlighted: true
                 onClicked: {
                     GamepadMapperManager.commitMapping()
-                    StackView.view.pop()
                 }
             }
         }
@@ -233,10 +232,10 @@ Item {
             errorDialog.text = msg
             errorDialog.open()
         }
-        function onMappingCommitted() {
-            // Re-scan to update device list
-            GamepadMapperManager.rescan()
-        }
+            function onMappingCommitted() {
+                GamepadMapperManager.rescan()
+                StackView.view.pop()
+            }
     }
 }
 
