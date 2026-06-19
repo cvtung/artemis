@@ -561,9 +561,12 @@ int main(int argc, char *argv[])
     // releases of Moonlight.
     SDL_SetHint(SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS, "0");
 
-    // Run joystick HID handling on a dedicated thread to avoid heap corruption
-    // from IOKit + CoreAnimation re-entrancy on macOS when USB devices are hotplugged.
-    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+    // NOTE: SDL_HINT_JOYSTICK_THREAD is NOT set globally. It is set only in
+    // input.cpp (streaming session) where IOKit + CoreAnimation re-entrancy
+    // during video rendering is a concern. Setting it globally makes every
+    // SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) start a joystick thread that
+    // races with main-thread SDL calls (e.g. SDL_IsGameController) and causes
+    // SIGSEGV on macOS with certain USB controllers.
 
     // Disable relative mouse scaling to renderer size or logical DPI. We want to send
     // the mouse motion exactly how it was given to us.
