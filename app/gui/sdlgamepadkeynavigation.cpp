@@ -31,15 +31,13 @@ void SdlGamepadKeyNavigation::enable()
         return;
     }
 
-    // Run joystick processing on a dedicated thread to avoid heap corruption
-    // from IOKit + CoreAnimation interaction when USB devices are hotplugged
-    // on macOS.
-    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+    // NOTE: SDL_HINT_JOYSTICK_THREAD is intentionally NOT set here. It is set
+    // only in input.cpp (streaming session) where IOKit + CoreAnimation
+    // re-entrancy during video rendering is a concern. Setting it globally
+    // races main-thread SDL calls and causes SIGSEGV on macOS.
 
-    // Load mappings BEFORE initializing the game controller subsystem. On macOS
-    // with SDL_HINT_JOYSTICK_THREAD, SDL_InitSubSystem() starts a dedicated
-    // joystick HID thread that reads the mapping table. If we modify the mapping
-    // table while that thread is running, we race with it and cause heap corruption.
+    // Load mappings before initializing the game controller subsystem so the
+    // mapping table is fully populated before any event processing reads it.
     MappingManager mappingManager;
     mappingManager.applyMappings();
 
@@ -65,16 +63,36 @@ void SdlGamepadKeyNavigation::enable()
 
     // Open all currently attached game controllers
     int numJoysticks = SDL_NumJoysticks();
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "SdlGamepadKeyNavigation: SDL has %d joystick(s) enumerated",
+                numJoysticks);
     for (int i = 0; i < numJoysticks; i++) {
         if (SDL_IsGameController(i)) {
             SDL_GameController* gc = SDL_GameControllerOpen(i);
             if (gc != nullptr) {
                 m_Gamepads.append(gc);
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                            "SdlGamepadKeyNavigation: Opened game controller [%d]",
+                            i);
             }
+            else {
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                            "SdlGamepadKeyNavigation: Failed to open game controller [%d]: %s",
+                            i, SDL_GetError());
+            }
+        }
+        else {
+            SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                         "SdlGamepadKeyNavigation: Joystick [%d] is not a game controller, skipping",
+                         i);
         }
     }
 
     m_Enabled = true;
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "SdlGamepadKeyNavigation: Enabled with %d gamepad(s)",
+                m_Gamepads.size());
 
     // Start the polling timer if the window is focused
     updateTimerState();
@@ -86,16 +104,26 @@ void SdlGamepadKeyNavigation::disable()
         return;
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "SdlGamepadKeyNavigation: Disabling with %d gamepad(s)",
+                m_Gamepads.size());
+
     m_Enabled = false;
     updateTimerState();
     Q_ASSERT(!m_PollingTimer->isActive());
 
     while (!m_Gamepads.isEmpty()) {
+        const char* name = SDL_GameControllerName(m_Gamepads[0]);
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "SdlGamepadKeyNavigation: Closing game controller: %s",
+                    name ? name : "<UNKNOWN>");
         SDL_GameControllerClose(m_Gamepads[0]);
         m_Gamepads.removeAt(0);
     }
 
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "SdlGamepadKeyNavigation: Disabled (SDL_INIT_GAMECONTROLLER quit)");
 }
 
 void SdlGamepadKeyNavigation::notifyWindowFocus(bool hasFocus)
@@ -119,6 +147,48 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
     }
 
     while (SDL_PollEvent(&event)) {
+        // Log all SDL events we receive at debug level for traceability
+        switch (event.type) {
+        case SDL_JOYDEVICEADDED:
+            SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                         "SDL event: JOYDEVICEADDED (which=%d)",
+                         event.jdevice.which);
+            break;
+        case SDL_JOYDEVICEREMOVED:
+            SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                         "SDL event: JOYDEVICEREMOVED (which=%d)",
+                         event.jdevice.which);
+            break;
+        case SDL_CONTROLLERDEVICEADDED:
+            SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                        "SDL event: CONTROLLERDEVICEADDED (which=%d)",
+                        event.cdevice.which);
+            break;
+        case SDL_CONTROLLERDEVICEREMOVED:
+            SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                        "SDL event: CONTROLLERDEVICEREMOVED (which=%d)",
+                        event.cdevice.which);
+            break;
+        case SDL_CONTROLLERBUTTONDOWN:
+            SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                         "SDL event: CONTROLLERBUTTONDOWN (which=%d, button=%d)",
+                         event.cdevice.which, event.cbutton.button);
+            break;
+        case SDL_CONTROLLERBUTTONUP:
+            SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                         "SDL event: CONTROLLERBUTTONUP (which=%d, button=%d)",
+                         event.cdevice.which, event.cbutton.button);
+            break;
+        case SDL_QUIT:
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                        "SDL event: QUIT");
+            break;
+        default:
+            SDL_LogDebug(SDL_LOG_CATEGORY_INPUT,
+                         "SDL event: UNKNOWN (type=0x%04x)", event.type);
+            break;
+        }
+
         switch (event.type) {
         case SDL_QUIT:
             // SDL may send us a quit event since we initialize
@@ -342,6 +412,10 @@ int SdlGamepadKeyNavigation::getConnectedGamepads()
             count++;
         }
     }
+
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                 "SdlGamepadKeyNavigation: getConnectedGamepads() = %d (SDL_NumJoysticks=%d)",
+                 count, numJoysticks);
 
     return count;
 }
