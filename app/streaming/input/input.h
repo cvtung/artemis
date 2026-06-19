@@ -153,6 +153,9 @@ public:
     static
     QString getUnmappedGamepads();
 
+    static
+    void earlyInitGamepads();
+
 private:
     enum KeyCombo {
         KeyComboQuit,

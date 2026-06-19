@@ -26,6 +26,8 @@ public:
 
     Q_INVOKABLE int getConnectedGamepads();
 
+    Q_INVOKABLE void suppressKeyEvents(bool suppress);
+
 signals:
     void unmappedGamepadDetected(QString name);
 
@@ -47,4 +49,5 @@ private:
     bool m_FirstPoll;
     bool m_HasFocus;
     Uint32 m_LastAxisNavigationEventTime;
+    bool m_SuppressKeyEvents = false;
 };

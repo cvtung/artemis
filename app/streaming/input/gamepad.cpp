@@ -947,16 +947,23 @@ void SdlInputHandler::setAdaptiveTriggers(uint16_t controllerNumber, DualSenseOu
     SDL_free(report);
 }
 
-QString SdlInputHandler::getUnmappedGamepads()
+static QString s_CachedUnmappedGamepads;
+static bool s_CachedInitialized = false;
+
+void SdlInputHandler::earlyInitGamepads()
 {
+    if (s_CachedInitialized) {
+        return;
+    }
+
     QString ret;
 
-    // Load mappings BEFORE initializing the game controller subsystem. On macOS
-    // with SDL_HINT_JOYSTICK_THREAD, SDL_InitSubSystem() starts a dedicated
-    // joystick HID thread that reads the mapping table. If we modify the mapping
-    // table while that thread is running, we race with it and cause heap corruption.
+    // Load mappings BEFORE initializing the game controller subsystem.
     MappingManager mappingManager;
     mappingManager.applyMappings();
+
+    // SDL_HINT_JOYSTICK_THREAD not set — called before QML/CoreAnimation
+    // init, so main-thread IOKit cannot re-enter CoreAnimation's heap.
 
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
@@ -1011,7 +1018,16 @@ QString SdlInputHandler::getUnmappedGamepads()
     SDL_FlushEvents(SDL_JOYDEVICEADDED, SDL_JOYDEVICEREMOVED);
     SDL_FlushEvents(SDL_CONTROLLERDEVICEADDED, SDL_CONTROLLERDEVICEREMAPPED);
 
-    return ret;
+    s_CachedUnmappedGamepads = ret;
+    s_CachedInitialized = true;
+}
+
+QString SdlInputHandler::getUnmappedGamepads()
+{
+    if (!s_CachedInitialized) {
+        earlyInitGamepads();
+    }
+    return s_CachedUnmappedGamepads;
 }
 
 int SdlInputHandler::getAttachedGamepadMask()

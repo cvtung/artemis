@@ -85,5 +85,5 @@ private:
     QMap<int, Uint8> m_InitialHats;
 
     // The 18 standard logical inputs
-    static const int k_LogicalInputCount = 18;
+    static const int k_LogicalInputCount = 22;
 };

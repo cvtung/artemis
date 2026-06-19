@@ -21,6 +21,10 @@ static const GamepadMapperManager::BindingEntry k_LogicalInputs[] = {
     { "start",         QT_TR_NOOP("Start")          },
     { "leftstick",     QT_TR_NOOP("LS")             },
     { "rightstick",    QT_TR_NOOP("RS")             },
+    { "leftx",         QT_TR_NOOP("LX")             },
+    { "lefty",         QT_TR_NOOP("LY")             },
+    { "rightx",        QT_TR_NOOP("RX")             },
+    { "righty",        QT_TR_NOOP("RY")             },
     { "leftshoulder",  QT_TR_NOOP("LB")             },
     { "rightshoulder", QT_TR_NOOP("RB")             },
     { "dpup",          QT_TR_NOOP("DPad Up")        },
@@ -419,7 +423,19 @@ void GamepadMapperManager::onCaptureTimerFired()
         Sint16 initial = m_InitialAxes.value(a, 0);
         Sint16 delta = current - initial;
         if (qAbs(delta) > 16000) {
-            QString binding = QString("a%1%2").arg(a).arg(delta > 0 ? "+" : "-");
+            // Stick axes (leftx/lefty/rightx/righty) use bare axis numbers
+            // without direction suffix in SDL mapping format.
+            const QString& field = k_LogicalInputs[m_CapturingInputId].sdlField;
+            bool isStickAxis = (field == QLatin1String("leftx") ||
+                                field == QLatin1String("lefty") ||
+                                field == QLatin1String("rightx") ||
+                                field == QLatin1String("righty"));
+            QString binding;
+            if (isStickAxis) {
+                binding = QString("a%1").arg(a);
+            } else {
+                binding = QString("a%1%2").arg(a).arg(delta > 0 ? "+" : "-");
+            }
             m_Bindings[m_CapturingInputId] = binding;
             int capturedId = m_CapturingInputId;
             m_CaptureTimer->stop();

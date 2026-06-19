@@ -3,6 +3,7 @@ import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 import GamepadMapperManager 1.0
+import SdlGamepadKeyNavigation 1.0
 
 Item {
     objectName: qsTr("Gamepad Mapping")
@@ -10,6 +11,13 @@ Item {
     property int selectedDeviceIndex: -1
     property int capturingInputId: -1
     property int bindingsRev: 0
+
+    // Suppress SdlGamepadKeyNavigation while capturing to prevent
+    // gamepad button events (e.g. B → Key_Escape) from closing
+    // the dialog before the mapper can read the input.
+    onCapturingInputIdChanged: {
+        SdlGamepadKeyNavigation.suppressKeyEvents(capturingInputId >= 0)
+    }
 
     // Error dialog for the page
     NavigableMessageDialog {
@@ -89,6 +97,7 @@ Item {
                         onClicked: {
                             selectedDeviceIndex = index
                             GamepadMapperManager.selectDeviceByIndex(index)
+                            bindingsRev++
                         }
                     }
                 }

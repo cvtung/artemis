@@ -31,10 +31,12 @@ void SdlGamepadKeyNavigation::enable()
         return;
     }
 
-    // NOTE: SDL_HINT_JOYSTICK_THREAD is intentionally NOT set here. It is set
-    // only in input.cpp (streaming session) where IOKit + CoreAnimation
-    // re-entrancy during video rendering is a concern. Setting it globally
-    // races main-thread SDL calls and causes SIGSEGV on macOS.
+    // On macOS, IOKit HID callbacks on the main thread can corrupt the heap
+    // during CoreAnimation rendering, so run joystick on a dedicated thread.
+    // This hint is scoped locally (not globally) to avoid racing MappingManager.
+#if defined(__APPLE__)
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
+#endif
 
     // Load mappings before initializing the game controller subsystem so the
     // mapping table is fully populated before any event processing reads it.
@@ -122,6 +124,12 @@ void SdlGamepadKeyNavigation::disable()
     }
 
     SDL_QuitSubSystem(SDL_INIT_GAMECONTROLLER);
+
+#if defined(__APPLE__)
+    // Reset the hint so other subsystems don't inadvertently start the thread.
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "0");
+#endif
+
     SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
                 "SdlGamepadKeyNavigation: Disabled (SDL_INIT_GAMECONTROLLER quit)");
 }
@@ -199,6 +207,10 @@ void SdlGamepadKeyNavigation::onPollingTimerFired()
         case SDL_CONTROLLERBUTTONDOWN:
         case SDL_CONTROLLERBUTTONUP:
         {
+            if (m_SuppressKeyEvents) {
+                break;
+            }
+
             QEvent::Type type =
                     event.type == SDL_CONTROLLERBUTTONDOWN ?
                         QEvent::Type::KeyPress : QEvent::Type::KeyRelease;
@@ -418,4 +430,12 @@ int SdlGamepadKeyNavigation::getConnectedGamepads()
                  count, numJoysticks);
 
     return count;
+}
+
+void SdlGamepadKeyNavigation::suppressKeyEvents(bool suppress)
+{
+    m_SuppressKeyEvents = suppress;
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "SdlGamepadKeyNavigation: key event dispatch %s",
+                suppress ? "SUPPRESSED" : "enabled");
 }

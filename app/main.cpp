@@ -47,6 +47,7 @@
 #include "streaming/session.h"
 #include "settings/streamingpreferences.h"
 #include "gui/sdlgamepadkeynavigation.h"
+#include "streaming/input/input.h"
 #include "settings/gamepadmappermanager.h"
 #include "backend/clipboardmanager.h"
 #include "backend/servercommandmanager.h"
@@ -708,6 +709,11 @@ int main(int argc, char *argv[])
     app.setDesktopFileName("com.moonlight_stream.Moonlight.desktop");
     qputenv("SDL_VIDEO_WAYLAND_WMCLASS", "com.moonlight_stream.Moonlight");
     qputenv("SDL_VIDEO_X11_WMCLASS", "com.moonlight_stream.Moonlight");
+
+    // Enumerate gamepads before QML/CoreAnimation initialization to prevent
+    // IOKit HID re-entrancy from corrupting the CoreAnimation heap on macOS.
+    // Must happen after QGuiApplication (for QSettings in MappingManager).
+    SdlInputHandler::earlyInitGamepads();
 
     // Register our C++ types for QML
     qmlRegisterType<ComputerModel>("ComputerModel", 1, 0, "ComputerModel");
