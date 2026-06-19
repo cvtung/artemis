@@ -34,6 +34,12 @@ MappingManager::MappingManager()
     }
     settings.endArray();
 
+    if (mappingCount > 0) {
+        SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                     "MappingManager: Loaded %d saved mapping(s) from QSettings",
+                     mappingCount);
+    }
+
     // Finally load mappings from SDL_HINT_GAMECONTROLLERCONFIG
     QStringList sdlMappings =
             QString::fromLocal8Bit(SDL_GetHint(SDL_HINT_GAMECONTROLLERCONFIG))
@@ -99,6 +105,10 @@ void MappingManager::applyMappings()
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
                     "Bundled gamecontrollerdb.txt not found (submodule may be uninitialized)");
     }
+
+    SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION,
+                 "MappingManager: applyMappings() complete — loaded %d user mapping(s) into SDL",
+                 mappings.size());
 
     // Fallback: load cached file only when bundled file is missing (submodule
     // uninitialized). Intentional single-call design: a second
