@@ -84,6 +84,9 @@ void Session::clStageStarting(int stage)
     // We know this is called on the same thread as LiStartConnection()
     // which happens to be the main thread, so it's cool to interact
     // with the GUI in these callbacks.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Connection stage starting: %s (%d)",
+                LiGetStageName(stage), stage);
     emit s_ActiveSession->stageStarting(QString::fromLocal8Bit(LiGetStageName(stage)));
 }
 
@@ -95,6 +98,11 @@ void Session::clStageFailed(int stage, int errorCode)
 
     char failingPorts[128];
     LiStringifyPortFlags(portFlags, ", ", failingPorts, sizeof(failingPorts));
+
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Connection stage FAILED: %s (%d) — errorCode=%d, failingPorts=%s",
+                 LiGetStageName(stage), stage, errorCode, failingPorts);
+
     emit s_ActiveSession->stageFailed(QString::fromLocal8Bit(LiGetStageName(stage)), errorCode, QString(failingPorts));
 }
 
@@ -1363,6 +1371,11 @@ private:
 
     void run() override
     {
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "Deferred session cleanup running (unexpectedTermination=%d, shouldExitAfterQuit=%d)",
+                    m_Session->m_UnexpectedTermination,
+                    m_Session->m_ShouldExitAfterQuit);
+
         // Only quit the running app if our session terminated gracefully
         bool shouldQuit =
                 !m_Session->m_UnexpectedTermination &&
@@ -1697,6 +1710,12 @@ bool Session::startConnectionAsync()
     // have time to read any messages present on the segue
     SDL_Delay(1500);
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Starting async connection — app=%s (id=%d), computer=%s",
+                m_App.name.toUtf8().constData(),
+                m_App.id,
+                m_Computer->name.toUtf8().constData());
+
     // The UI should have ensured the old game was already quit
     // if we decide to stream a different game.
     Q_ASSERT(m_Computer->currentGameId == 0 ||
@@ -1825,11 +1844,16 @@ bool Session::startConnectionAsync()
                                 &m_VideoCallbacks, &m_AudioCallbacks,
                                 NULL, 0, NULL, 0);
     if (err != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "LiStartConnection() failed with error: %d",
+                     err);
         // We already displayed an error dialog in the stage failure
         // listener.
         return false;
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "LiStartConnection() succeeded");
     emit connectionStarted();
     return true;
 }
@@ -1883,6 +1907,10 @@ void Session::exec(QWindow* qtWindow)
     // the Qt EGLFS backend, so we will restrict this to X11
     m_ThreadedExec = WMUtils::isRunningX11() || WMUtils::isRunningWayland();
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Session exec starting (threaded=%d)",
+                m_ThreadedExec);
+
     if (m_ThreadedExec) {
         // Run the streaming session on a separate thread for Linux/BSD
         ExecThread execThread(this);
@@ -1916,17 +1944,26 @@ void Session::execInternal()
     //
     // NB: This initializes the SDL video subsystem, so it must be
     // called on the main thread.
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Session initialization starting");
     if (!initialize()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Session initialization failed");
         emit sessionFinished(0);
         emit readyForDeletion();
         return;
     }
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Session initialization complete");
 
     // Wait for any old session to finish cleanup
     s_ActiveSessionSemaphore.acquire();
 
     // We're now active
     s_ActiveSession = this;
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Session now active");
 
     // Initialize the gamepad code with our preferences
     // NB: m_InputHandler must be initialize before starting the connection.
@@ -1955,12 +1992,17 @@ void Session::execInternal()
 
     // If the connection failed, clean up and abort the connection.
     if (!m_AsyncConnectionSuccess) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Async connection failed, aborting session");
         delete m_InputHandler;
         m_InputHandler = nullptr;
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
         QThreadPool::globalInstance()->start(new DeferredSessionCleanupTask(this));
         return;
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Connection established, creating streaming window");
 
     int x, y, width, height;
     getWindowDimensions(x, y, width, height);
@@ -2039,6 +2081,10 @@ void Session::execInternal()
             return;
         }
     }
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Streaming window created: %dx%d at (%d,%d)",
+                width, height, x, y);
 
     // HACK: Remove once proper Dark Mode support lands in SDL
 #ifdef Q_OS_WIN32
@@ -2166,6 +2212,11 @@ void Session::execInternal()
 
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
+
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "Streaming event loop started — %s — %s",
+                m_App.name.toUtf8().constData(),
+                m_Computer->name.toUtf8().constData());
 
     // Hijack this thread to be the SDL main thread. We have to do this
     // because we want to suspend all Qt processing until the stream is over.

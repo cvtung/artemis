@@ -2,6 +2,7 @@
 #include "nvcomputer.h"
 #include "nvhttp.h"
 #include "streaming/session.h"
+#include "SDL_compat.h"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QNetworkRequest>
@@ -166,6 +167,9 @@ void ServerCommandManager::executeCommand(const QString &commandId)
     emit executionStateChanged();
     
     qDebug() << "ServerCommandManager: Executing command:" << commandId;
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "ServerCommandManager: Executing command: %s",
+                commandId.toUtf8().constData());
     
     // Execute the actual command via HTTP
     sendCommandExecution(commandId);
@@ -447,9 +451,15 @@ void ServerCommandManager::sendCommandExecution(const QString &commandId)
 
     if (result == 0) {
         qDebug() << "ServerCommandManager: Command executed successfully:" << commandId;
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "ServerCommandManager: Command executed successfully via ENet: %s",
+                    commandId.toUtf8().constData());
         emit commandExecuted(commandId, true, "Command executed successfully");
     } else {
         qWarning() << "ServerCommandManager: Command execution failed:" << commandId << "with result:" << result;
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "ServerCommandManager: Command execution failed: %s (result=%d)",
+                     commandId.toUtf8().constData(), result);
         emit commandFailed(commandId, QString("Command execution failed with result: %1").arg(result));
     }
 }

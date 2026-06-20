@@ -2,6 +2,7 @@
 #include "servercommandmanager.h"
 #include "clipboardmanager.h"
 #include "../streaming/session.h"
+#include "SDL_compat.h"
 
 // Forward declaration of KeyCombo enum values
 enum KeyCombo {
@@ -115,6 +116,9 @@ void QuickMenuManager::setVisible(bool visible)
 
 void QuickMenuManager::toggle()
 {
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "QuickMenuManager: Toggling menu (visible=%d)",
+                !m_isVisible);
     setVisible(!m_isVisible);
 }
 
@@ -131,6 +135,9 @@ void QuickMenuManager::hide()
 void QuickMenuManager::executeAction(const QString &action)
 {
     qDebug() << "QuickMenuManager: Executing action:" << action;
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "QuickMenuManager: Executing action: %s",
+                action.toUtf8().constData());
     
     if (action == "disconnect") {
         disconnect();
@@ -178,6 +185,9 @@ void QuickMenuManager::showToast(const QString &message) {
     QTimer::singleShot(3000, m_ToastWindow, &QQuickView::hide);
 
     qDebug() << "QuickMenuManager: showToast(" << message << ")";
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "QuickMenuManager: Toast: %s",
+                message.toUtf8().constData());
 }
 
 void QuickMenuManager::disconnect()

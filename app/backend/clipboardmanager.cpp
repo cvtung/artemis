@@ -2,6 +2,7 @@
 #include "nvcomputer.h"
 #include "nvhttp.h"
 #include "settings/artemissettings.h"
+#include "SDL_compat.h"
 #include <QGuiApplication>
 #include <QMimeData>
 #include <QDebug>
@@ -92,6 +93,9 @@ void ClipboardManager::setConnection(NvComputer *computer, NvHTTP *http)
     }
     
     qDebug() << "ClipboardManager: Connected to" << (computer ? computer->name : "null");
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "ClipboardManager: Connected to %s",
+                computer ? computer->name.toUtf8().constData() : "null");
     
     // Check and emit Apollo support status
     bool supported = isClipboardSyncSupported();
@@ -120,6 +124,8 @@ void ClipboardManager::disconnect()
     emit apolloSupportChanged(false);
     
     qDebug() << "ClipboardManager: Disconnected";
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                "ClipboardManager: Disconnected");
 }
 
 bool ClipboardManager::sendClipboard(bool force)
@@ -393,10 +399,15 @@ bool ClipboardManager::sendClipboardToServer(const QString &content)
         }
         
         qDebug() << "ClipboardManager: Successfully sent clipboard to server";
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "ClipboardManager: Successfully sent clipboard to server (%d chars)",
+                    content.size());
         return true;
     } else {
         emit clipboardSyncFailed("Failed to send clipboard to server");
         qWarning() << "ClipboardManager: Failed to send clipboard to server";
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "ClipboardManager: Failed to send clipboard to server");
         return false;
     }
 }
@@ -423,10 +434,15 @@ QString ClipboardManager::getClipboardFromServer()
         }
         
         qDebug() << "ClipboardManager: Successfully received clipboard from server";
+        SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,
+                    "ClipboardManager: Successfully received clipboard from server (%d chars)",
+                    content.size());
         return content;
     } else {
         emit clipboardSyncFailed("Failed to get clipboard from server");
         qWarning() << "ClipboardManager: Failed to get clipboard from server";
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "ClipboardManager: Failed to get clipboard from server");
         return QString();
     }
 }

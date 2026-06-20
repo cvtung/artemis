@@ -482,6 +482,15 @@ void SdlInputHandler::handleTouchFingerEvent(SDL_TouchFingerEvent* event)
     return;
 #endif
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Touch finger %s: fingerId=%lld touchId=%lld x=%.3f y=%.3f dx=%.3f dy=%.3f pressure=%.3f",
+                event->type == SDL_FINGERDOWN ? "DOWN" :
+                    event->type == SDL_FINGERUP ? "UP" : "MOTION",
+                (long long)event->fingerId,
+                (long long)event->touchId,
+                event->x, event->y, event->dx, event->dy,
+                event->pressure);
+
     if (m_AbsoluteTouchMode) {
         handleAbsoluteFingerEvent(event);
     }

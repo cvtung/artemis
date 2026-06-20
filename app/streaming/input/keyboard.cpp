@@ -468,6 +468,12 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         m_KeysDown.remove(keyCode);
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Key %s: scancode=%d keycode=0x%04x modifiers=0x%02x%s",
+                event->state == SDL_PRESSED ? "DOWN" : "UP",
+                event->keysym.scancode, keyCode, modifiers,
+                shouldNotConvertToScanCodeOnServer ? " (non-normalized)" : "");
+
     LiSendKeyboardEvent2(0x8000 | keyCode,
                         event->state == SDL_PRESSED ?
                             KEY_ACTION_DOWN : KEY_ACTION_UP,

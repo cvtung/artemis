@@ -62,6 +62,11 @@ void SdlInputHandler::handleMouseButtonEvent(SDL_MouseButtonEvent* event)
             button = BUTTON_RIGHT;
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Mouse button %s: button=%d x=%.0f y=%.0f",
+                event->state == SDL_PRESSED ? "DOWN" : "UP",
+                button, event->x, event->y);
+
     LiSendMouseButtonEvent(event->state == SDL_PRESSED ?
                                BUTTON_ACTION_PRESS :
                                BUTTON_ACTION_RELEASE,
@@ -139,6 +144,10 @@ void SdlInputHandler::handleMouseMotionEvent(SDL_MouseMotionEvent* event)
 
         // Adjust the cursor visibility if applicable
         if (mouseInVideoRegion ^ m_MouseWasInVideoRegion) {
+            SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                        "Mouse %s video region (x=%.0f y=%.0f)",
+                        mouseInVideoRegion ? "entered" : "left",
+                        x, y);
             SDL_ShowCursor((mouseInVideoRegion && m_MouseCursorCapturedVisibilityState == SDL_DISABLE) ? SDL_DISABLE : SDL_ENABLE);
             if (!mouseInVideoRegion && buttonState != 0) {
                 // If we still have a button pressed on leave, wait for that to come up
@@ -187,6 +196,9 @@ void SdlInputHandler::handleMouseWheelEvent(SDL_MouseWheelEvent* event)
         event->preciseY = SDL_clamp(event->preciseY, -1.0f, 1.0f);
 #endif
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Mouse wheel vertical: %.2f",
+                    event->preciseY);
         LiSendHighResScrollEvent((short)(event->preciseY * 120)); // WHEEL_DELTA
     }
 
@@ -202,6 +214,9 @@ void SdlInputHandler::handleMouseWheelEvent(SDL_MouseWheelEvent* event)
         event->preciseX = SDL_clamp(event->preciseX, -1.0f, 1.0f);
 #endif
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Mouse wheel horizontal: %.2f",
+                    event->preciseX);
         LiSendHighResHScrollEvent((short)(event->preciseX * 120)); // WHEEL_DELTA
     }
 #else
@@ -216,6 +231,9 @@ void SdlInputHandler::handleMouseWheelEvent(SDL_MouseWheelEvent* event)
         event->y = SDL_clamp(event->y, -1, 1);
 #endif
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Mouse wheel vertical: %d",
+                    event->y);
         LiSendScrollEvent((signed char)event->y);
     }
 
@@ -230,6 +248,9 @@ void SdlInputHandler::handleMouseWheelEvent(SDL_MouseWheelEvent* event)
         event->x = SDL_clamp(event->x, -1, 1);
 #endif
 
+        SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                    "Mouse wheel horizontal: %d",
+                    event->x);
         LiSendHScrollEvent((signed char)event->x);
     }
 #endif

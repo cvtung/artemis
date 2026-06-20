@@ -266,6 +266,12 @@ void SdlInputHandler::handleControllerButtonEvent(SDL_ControllerButtonEvent* eve
         return;
     }
 
+    SDL_LogInfo(SDL_LOG_CATEGORY_INPUT,
+                "Gamepad %d button %s: button=%u",
+                event->which,
+                event->state == SDL_PRESSED ? "DOWN" : "UP",
+                event->button);
+
     if (m_SwapFaceButtons) {
         switch (event->button) {
         case SDL_CONTROLLER_BUTTON_A:
