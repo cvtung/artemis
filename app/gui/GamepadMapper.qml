@@ -25,6 +25,21 @@ Item {
         standardButtons: Dialog.Ok
     }
 
+    // Success dialog shown briefly after saving a mapping
+    NavigableMessageDialog {
+        id: successDialog
+        standardButtons: Dialog.NoButton
+    }
+
+    Timer {
+        id: successCloseTimer
+        interval: 2000
+        onTriggered: {
+            successDialog.close()
+            stackView.pop()
+        }
+    }
+
     StackView.onActivated: {
         GamepadMapperManager.open()
         GamepadMapperManager.rescan()
@@ -214,7 +229,7 @@ Item {
 
             Button {
                 text: qsTr("Cancel")
-                onClicked: StackView.view.pop()
+                onClicked: stackView.pop()
             }
 
             Button {
@@ -243,7 +258,9 @@ Item {
         }
             function onMappingCommitted() {
                 GamepadMapperManager.rescan()
-                StackView.view.pop()
+                successDialog.text = qsTr("Mapping saved!")
+                successDialog.open()
+                successCloseTimer.start()
             }
     }
 }
