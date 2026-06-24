@@ -156,7 +156,7 @@ Item {
 
                     delegate: Rectangle {
                         width: parent.width
-                        height: 36
+                        height: 52
                         radius: 3
                         color: "#2a2a2a"
 
