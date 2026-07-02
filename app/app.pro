@@ -65,6 +65,13 @@ macx:!disable-prebuilts {
     QMAKE_CFLAGS += -F$$PWD/mac/Frameworks
     QMAKE_CXXFLAGS += -F$$PWD/mac/Frameworks
     QMAKE_OBJECTIVE_CFLAGS += -F$$PWD/mac/Frameworks
+
+    # Suppress implicit function declaration errors from Qt 6.8 headers
+    # (qyieldcpu.h uses __yield() without including <arm_acle.h>)
+    # when building with Xcode 26.5+ / Clang 21+ which treats these as errors.
+    QMAKE_CFLAGS += -Wno-implicit-function-declaration
+    QMAKE_CXXFLAGS += -Wno-implicit-function-declaration
+    QMAKE_OBJECTIVE_CFLAGS += -Wno-implicit-function-declaration
 }
 
 unix:if(!macx|disable-prebuilts) {
